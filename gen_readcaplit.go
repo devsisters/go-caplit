@@ -6,7 +6,7 @@ import (
 	"go/ast"
 )
 
-func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumList []string) {
+func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumList []string, importList []string) {
 	capnpStructs := CapnpStructs(inputPath)
 
 	int8Template := `
@@ -489,6 +489,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 
 	params := map[string]interface{}{
 		"package": packageName,
+		"importList": importList,
 		"structs": newCapnpStructs,
 	}
 
@@ -504,7 +505,8 @@ import (
 	"io"
 	"strconv"
 	"fmt"
-
+    {{range .importList}}
+    "{{.}}"{{end}}
 	"github.com/glycerine/go-capnproto"
 )
 
