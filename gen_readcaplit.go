@@ -506,7 +506,7 @@ import (
 	"strconv"
 	"fmt"
     {{range .importList}}
-    "{{.}}"{{end}}
+    . "{{.}}"{{end}}
 	"github.com/glycerine/go-capnproto"
 )
 
