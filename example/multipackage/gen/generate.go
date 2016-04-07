@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Generate ReadCaplit function...")
+	fmt.Println("-- Generate ReadCaplit function...")
 	dogEnumList := caplit.GetEnumList("../capnp/dog")
 	caplit.GenCapnpReadCapLit("../capnp/dog", "../capnp/dog/generated_readcaplit.go", "dog", dogEnumList, []string{})
 	allEnumList := append(caplit.GetEnumList("../capnp/cat"), dogEnumList...)
