@@ -1,5 +1,6 @@
 # go-caplit
-It is CapLit message deserializer for Go. CapLit stands for 'capnproto literal'. So, this library converts a text(CapLit format) to a Go Object.
+It is CapLit message deserializer for Go. CapLit stands for 'capnproto literal'. So, this library converts a text(CapLit format) to a Go Object.  
+For instance, if you have 'Person' Struct with 2 attributes(name, age), you can make a Person object from string '(name="gopher", age=10)' using this library.
 
 # Usage
 Since Go does not support Generic Type, we have to generate 'ReadCapLit' method for each capnp structs.  
@@ -25,9 +26,7 @@ You can use ReadCapLit function with follwing 3 steps.
 3. Use ReadCapLit function with your own caplit string
 
 # Examples
-This readme file contains only some naive examples. If you want to know the exact files and codes, you can get 2 examples in `example` folder - the examples work with `make` command.  
-
-
+You can get 2 examples in `example` folder - the examples work with `make` command.  
 
 # License
 MIT License. see LICENSE file.
