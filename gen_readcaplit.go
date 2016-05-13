@@ -279,14 +279,20 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 					v := New%s(s.Segment, len(valueList))
 					for i, vs := range valueList {
 						elem := New%s(s.Segment)
-						elem.ReadCapLit(bytes.NewReader([]byte(vs)))
+						err := elem.ReadCapLit(bytes.NewReader([]byte(vs)))
+						if err != nil {
+							return err
+						}
 						v.Set(i, elem)
 					}
 					s.Set%s(v)`
 
 	structTemplate := `
 					v := New%s(s.Segment)
-					v.ReadCapLit(bytes.NewReader([]byte(value)))
+					err := v.ReadCapLit(bytes.NewReader([]byte(value)))
+					if err != nil {
+						return err
+					}
 					s.Set%s(v)`
 
 	newCapnpStructs := make([]CapnpStruct,0)
