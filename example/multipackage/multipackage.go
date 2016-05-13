@@ -15,6 +15,9 @@ func main() {
 	catCaplit := `(id=1,name="Navi",partner=(id=2,name="Lolo",age=16,toys=[(id=1,price=42,toyType=doll),]))`
 	fmt.Println("-- ReadCapLit with data: ")
 	fmt.Println(catCaplit)
-	myCat.ReadCapLit(strings.NewReader(catCaplit))
+	err := myCat.ReadCapLit(strings.NewReader(catCaplit))
+	if err != nil {
+		panic(err)
+	}
 	fmt.Printf("#%v cat '%v' has a partner dog '%v'\n", myCat.Id(), myCat.Name(), myCat.Partner().Name())
 }

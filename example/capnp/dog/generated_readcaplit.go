@@ -252,6 +252,9 @@ func (s Dog) ReadCapLit(r io.Reader) error {
 				s.SetId(int32(v))
 
 			case "name":
+				if string([]rune(value)[0]) != "\"" || string([]rune(value)[len(value)-1]) != "\"" {
+					return errors.New("First and last character of string must be \"")
+				}
 				s.SetName(value[1 : len(value)-1])
 
 			case "age":
@@ -266,7 +269,10 @@ func (s Dog) ReadCapLit(r io.Reader) error {
 				v := NewDogToyList(s.Segment, len(valueList))
 				for i, vs := range valueList {
 					elem := NewDogToy(s.Segment)
-					elem.ReadCapLit(bytes.NewReader([]byte(vs)))
+					err := elem.ReadCapLit(bytes.NewReader([]byte(vs)))
+					if err != nil {
+						return err
+					}
 					v.Set(i, elem)
 				}
 				s.SetToys(v)
