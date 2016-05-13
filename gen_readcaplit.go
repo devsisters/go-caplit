@@ -94,6 +94,9 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 					s.Set%v(v)`
 
 	stringTemplate := `
+					if string([]rune(value)[0]) != "\"" || string([]rune(value)[len(value)-1]) != "\"" {
+						return errors.New("First and last character of string must be \"")
+					}
 					s.Set%v(value[1:len(value)-1])`
 
 	boolTemplate := `
