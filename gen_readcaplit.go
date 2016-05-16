@@ -2,8 +2,8 @@ package caplit
 
 import (
 	"fmt"
-	"strings"
 	"go/ast"
+	"strings"
 )
 
 func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumList []string, importList []string) {
@@ -298,13 +298,13 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 					}
 					s.Set%s(v)`
 
-	newCapnpStructs := make([]CapnpStruct,0)
+	newCapnpStructs := make([]CapnpStruct, 0)
 	for _, capnpStruct := range capnpStructs {
 		filter := func(t *ast.FuncDecl) bool {
 			return receiverType(t) == capnpStruct.Name && strings.HasPrefix(t.Name.Name, "Set")
 		}
-		funcDecls := parseCapnpFuncDecl(inputPath + "/*.capnp.go", filter)
-		capnpStruct.Keys = make([]CapnpStructParams,0)
+		funcDecls := parseCapnpFuncDecl(inputPath+"/*.capnp.go", filter)
+		capnpStruct.Keys = make([]CapnpStructParams, 0)
 
 		for _, funcDecl := range funcDecls {
 			typeName := funcDecl.FuncDecl.Name.Name[3:]
@@ -467,7 +467,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 				} else {
 					// Handle custom lists
 					if strings.HasSuffix(pt, "_List") {
-						rootPt := pt[:len(pt) - 5]
+						rootPt := pt[:len(pt)-5]
 						pt = rootPt + "List"
 						// Handle enums
 						if elemInList(rootPt, enumList) {
@@ -497,9 +497,9 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 	}
 
 	params := map[string]interface{}{
-		"package": packageName,
+		"package":    packageName,
 		"importList": importList,
-		"structs": newCapnpStructs,
+		"structs":    newCapnpStructs,
 	}
 
 	template := `package {{.package}}

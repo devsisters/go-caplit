@@ -1,16 +1,16 @@
 package caplit
 
 import (
-	"go/ast"
 	"fmt"
-	"unicode"
-	"go/token"
-	"path/filepath"
-	"strings"
+	"go/ast"
 	"go/parser"
-	"text/template"
+	"go/token"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
+	"text/template"
+	"unicode"
 )
 
 type CapnpStructParams struct {
