@@ -48,13 +48,12 @@ func paramType(fn *ast.FuncDecl) string {
 			panic(fmt.Sprintf("unknown param type %T", e.X))
 		}
 	case *ast.SelectorExpr:
-		switch sel := e.Sel; es := e.X.(type) {
+		switch sel := e.Sel; e.X.(type) {
 		case *ast.Ident:
 			// Name is not neccesary ( shared.MagicStat -> MagicStat )
 			return sel.Name
 		case *ast.SelectorExpr:
 			panic("do not enter this phase")
-			return "[]" + es.X.(*ast.Ident).Name + "." + es.Sel.String()
 		default:
 			panic(fmt.Sprintf("unknown param type %T", e.X))
 		}
