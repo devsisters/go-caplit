@@ -633,7 +633,10 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					s.Set%s(v)`
 	unionTemplate := `
 					v := s.%s()
-					v.GetKeyAndValue(value)`
+					err := v.GetKeyAndValue(value)
+					if err != nil {
+						return err
+					}`
 	typeName := funcDecl.FuncDecl.Name.Name[3:]
 	var capnpStructParams CapnpStructParams
 	pt := paramType(funcDecl.FuncDecl)
