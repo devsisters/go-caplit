@@ -315,12 +315,13 @@ func (s {{.Name}}) GetSegment() *capn.Segment { return s.Segment }
 func (s {{.Parent}}{{.Name}}) GetKeyAndValue(v string) error {
 	// expected input form : '(KEY=VALUE)'
 	if strings.HasPrefix(v, "(") && strings.HasSuffix(v, ")") {
-		keyAndValue := strings.SplitAfterN(v, "=", 2)
+		keyAndValue := strings.SplitN(v, "=", 2)
 		if len(keyAndValue) != 2 {
 			return errors.New("Parse Error : Value for {{.Name}} does not have 'v'")
 		}
-		key := keyAndValue[0]
+		key := strings.TrimSpace(keyAndValue[0][1:])
 		value := keyAndValue[1]
+		value = strings.TrimSpace(value[:len(value)-1])
 
 		switch key {
 		{{range .Keys}}
@@ -329,6 +330,7 @@ func (s {{.Parent}}{{.Name}}) GetKeyAndValue(v string) error {
 		default:
 			return errors.New(fmt.Sprintf("cannot find schema for %v=%v", key, value))
 		}
+		return nil
 	}
 
 	return errors.New("Value for {{.Name}} does not wrapped with ()")
