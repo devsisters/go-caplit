@@ -22,6 +22,7 @@ type CapnpStruct struct {
 	Name string
 	Path string
 	Keys []CapnpStructParams
+	Parent string
 }
 
 type CapnpFuncDecl struct {
@@ -95,8 +96,23 @@ func returnType(fn *ast.FuncDecl) string {
 		return e.Name
 	case *ast.StarExpr:
 		return e.X.(*ast.Ident).Name
+	case *ast.ArrayType:
+		switch es := e.Elt.(type) {
+		case *ast.Ident:
+			return "[]" + es.Name
+		default:
+			panic(fmt.Sprintf("unknown method receiver AST node type %T", es))
+
+		}
+	case *ast.SelectorExpr:
+		switch sel := e.Sel; e.X.(type) {
+		case *ast.Ident:
+			return sel.Name
+		default:
+			panic(fmt.Sprintf("unknown method receiver AST node type %T", e.X))
+		}
 	}
-	panic(fmt.Sprintf("unknown method receiver AST node type %T", fn.Recv.List[0].Type))
+	panic(fmt.Sprintf("unknown method receiver AST node type %T", fn.Type.Results.List[0].Type))
 }
 
 func check(err error) {

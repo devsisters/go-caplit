@@ -189,6 +189,7 @@ func ReadRootDog(s *C.Segment) Dog  { return Dog(s.Root(0).ToStruct()) }
 func (s Dog) Id() int32             { return int32(C.Struct(s).Get32(0)) }
 func (s Dog) SetId(v int32)         { C.Struct(s).Set32(0, uint32(v)) }
 func (s Dog) Name() string          { return C.Struct(s).GetObject(0).ToText() }
+func (s Dog) NameBytes() []byte     { return C.Struct(s).GetObject(0).ToDataTrimLastByte() }
 func (s Dog) SetName(v string)      { C.Struct(s).SetObject(0, s.Segment.NewText(v)) }
 func (s Dog) Age() int8             { return int8(C.Struct(s).Get8(4)) }
 func (s Dog) SetAge(v int8)         { C.Struct(s).Set8(4, uint8(v)) }

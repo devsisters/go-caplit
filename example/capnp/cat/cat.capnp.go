@@ -20,6 +20,7 @@ func ReadRootCat(s *C.Segment) Cat { return Cat(s.Root(0).ToStruct()) }
 func (s Cat) Id() int32            { return int32(C.Struct(s).Get32(0)) }
 func (s Cat) SetId(v int32)        { C.Struct(s).Set32(0, uint32(v)) }
 func (s Cat) Name() string         { return C.Struct(s).GetObject(0).ToText() }
+func (s Cat) NameBytes() []byte    { return C.Struct(s).GetObject(0).ToDataTrimLastByte() }
 func (s Cat) SetName(v string)     { C.Struct(s).SetObject(0, s.Segment.NewText(v)) }
 func (s Cat) Partner() dog.Dog     { return dog.Dog(C.Struct(s).GetObject(1).ToStruct()) }
 func (s Cat) SetPartner(v dog.Dog) { C.Struct(s).SetObject(1, C.Object(v)) }
