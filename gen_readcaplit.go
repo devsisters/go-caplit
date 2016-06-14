@@ -268,7 +268,6 @@ func capLitParser() func(string) (string, string, string, bool) {
 {{range .structs}}
 func (s {{.Name}}) ReadCapLit(r io.Reader) error {
 	b := bufio.NewReader(r)
-	parseError := errors.New("Parse error")
 	var substatus, key, value string
 	var inQuote bool
 	parser := capLitParser()
@@ -295,7 +294,7 @@ func (s {{.Name}}) ReadCapLit(r io.Reader) error {
 			case "{{.Name}}": {{.Template}}
 			{{end}}
 			default:
-				return parseError
+				return errors.New(fmt.Sprintf("cannot find key in {{.Name}} : %v", key))
 			}
 
 			substatus = ""
@@ -303,7 +302,7 @@ func (s {{.Name}}) ReadCapLit(r io.Reader) error {
 	}
 
 	if substatus != "" {
-		return parseError
+		return errors.New("mismatched bracket in {{.Name}}")
 	}
 
 	return nil

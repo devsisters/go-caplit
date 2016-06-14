@@ -159,7 +159,6 @@ func capLitParser() func(string) (string, string, string, bool) {
 
 func (s DogToy) ReadCapLit(r io.Reader) error {
 	b := bufio.NewReader(r)
-	parseError := errors.New("Parse error")
 	var substatus, key, value string
 	var inQuote bool
 	parser := capLitParser()
@@ -202,7 +201,7 @@ func (s DogToy) ReadCapLit(r io.Reader) error {
 				s.SetToyType(v)
 
 			default:
-				return parseError
+				return errors.New(fmt.Sprintf("cannot find key in DogToy : %v", key))
 			}
 
 			substatus = ""
@@ -210,7 +209,7 @@ func (s DogToy) ReadCapLit(r io.Reader) error {
 	}
 
 	if substatus != "" {
-		return parseError
+		return errors.New("mismatched bracket in DogToy")
 	}
 
 	return nil
@@ -220,7 +219,6 @@ func (s DogToy) GetSegment() *capn.Segment { return s.Segment }
 
 func (s Dog) ReadCapLit(r io.Reader) error {
 	b := bufio.NewReader(r)
-	parseError := errors.New("Parse error")
 	var substatus, key, value string
 	var inQuote bool
 	parser := capLitParser()
@@ -278,7 +276,7 @@ func (s Dog) ReadCapLit(r io.Reader) error {
 				s.SetToys(v)
 
 			default:
-				return parseError
+				return errors.New(fmt.Sprintf("cannot find key in Dog : %v", key))
 			}
 
 			substatus = ""
@@ -286,7 +284,7 @@ func (s Dog) ReadCapLit(r io.Reader) error {
 	}
 
 	if substatus != "" {
-		return parseError
+		return errors.New("mismatched bracket in Dog")
 	}
 
 	return nil

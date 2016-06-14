@@ -160,7 +160,6 @@ func capLitParser() func(string) (string, string, string, bool) {
 
 func (s Cat) ReadCapLit(r io.Reader) error {
 	b := bufio.NewReader(r)
-	parseError := errors.New("Parse error")
 	var substatus, key, value string
 	var inQuote bool
 	parser := capLitParser()
@@ -206,7 +205,7 @@ func (s Cat) ReadCapLit(r io.Reader) error {
 				s.SetPartner(v)
 
 			default:
-				return parseError
+				return errors.New(fmt.Sprintf("cannot find key in Cat : %v", key))
 			}
 
 			substatus = ""
@@ -214,7 +213,7 @@ func (s Cat) ReadCapLit(r io.Reader) error {
 	}
 
 	if substatus != "" {
-		return parseError
+		return errors.New("mismatched bracket in Cat")
 	}
 
 	return nil
