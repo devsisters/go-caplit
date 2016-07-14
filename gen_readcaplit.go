@@ -429,7 +429,8 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					s.Set%v(v)`
 
 	stringTemplate := `
-					if string([]rune(value)[0]) != "\"" || string([]rune(value)[len(value)-1]) != "\"" {
+					runedValue := []rune(value)
+					if string(runedValue[0]) != "\"" || string(runedValue[len(runedValue)-1]) != "\"" {
 						return errors.New("First and last character of string must be \"")
 					}
 					s.Set%v(value[1:len(value)-1])`
