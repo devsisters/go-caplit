@@ -34,6 +34,9 @@ func arrayInStringParser(s string) []string {
 			fallthrough
 		case ")":
 			innerCount--
+			if innerCount < 0 {
+				panic("( and ) are not matched.")
+			}
 			buff += target
 		case ",":
 			if innerCount == 0 {
@@ -191,7 +194,8 @@ func (s Cat) ReadCapLit(r io.Reader) error {
 				s.SetId(int32(v))
 
 			case "name":
-				if string([]rune(value)[0]) != "\"" || string([]rune(value)[len(value)-1]) != "\"" {
+				runedValue := []rune(value)
+				if string(runedValue[0]) != "\"" || string(runedValue[len(runedValue)-1]) != "\"" {
 					return errors.New("First and last character of string must be \"")
 				}
 				s.SetName(value[1 : len(value)-1])
