@@ -140,6 +140,9 @@ func arrayInStringParser(s string) []string {
 			fallthrough
 		case ")":
 			innerCount--
+			if innerCount < 0 {
+				panic("( and ) are not matched.")
+			}
 			buff += target
 		case ",":
 			if innerCount == 0 {
