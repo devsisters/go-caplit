@@ -22,7 +22,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 		retType := returnType(t)
 		recvType := receiverType(t)
 		for _, decl := range unionWhichDecls {
-			if receiverType(decl.FuncDecl) == retType && recvType != "" && len(t.Type.Params.List) == 0 && retType == recvType + t.Name.Name{
+			if receiverType(decl.FuncDecl) == retType && recvType != "" && len(t.Type.Params.List) == 0 && retType == recvType+t.Name.Name {
 				return true
 			}
 		}
@@ -94,11 +94,11 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 	}
 
 	params := map[string]interface{}{
-		"package":    packageName,
-		"importList": importList,
-		"structs":    newCapnpStructs,
+		"package":     packageName,
+		"importList":  importList,
+		"structs":     newCapnpStructs,
 		"unionExists": len(newCapnpUnions) != 0,
-		"unions":     newCapnpUnions,
+		"unions":      newCapnpUnions,
 	}
 
 	template := `package {{.package}}
@@ -648,10 +648,10 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 	pt := paramType(funcDecl.FuncDecl)
 	switch pt {
 	case "":
-	 	if FuncDeclInList(funcDecl, unions) {
+		if FuncDeclInList(funcDecl, unions) {
 			// Handle Unions
 			capnpStructParams = CapnpStructParams{
-				Name:    firstToLower(funcDecl.FuncDecl.Name.Name),
+				Name:     firstToLower(funcDecl.FuncDecl.Name.Name),
 				Template: fmt.Sprintf(unionTemplate, funcDecl.FuncDecl.Name.Name),
 			}
 		} else {
@@ -811,7 +811,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 		} else {
 			// Handle custom lists
 			if strings.HasSuffix(pt, "_List") {
-				rootPt := pt[:len(pt) - 5]
+				rootPt := pt[:len(pt)-5]
 				pt = rootPt + "List"
 				// Handle enums
 				if elemInList(rootPt, enumList) {

@@ -19,9 +19,9 @@ type CapnpStructParams struct {
 }
 
 type CapnpStruct struct {
-	Name string
-	Path string
-	Keys []CapnpStructParams
+	Name   string
+	Path   string
+	Keys   []CapnpStructParams
 	Parent string
 }
 
