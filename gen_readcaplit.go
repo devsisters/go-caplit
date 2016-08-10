@@ -450,7 +450,11 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					valueList := arrayInStringParser(value)
 					v := s.Segment.NewTextList(len(valueList))
 					for i, vs := range valueList {
-						v.Set(i, vs)
+						runedValue := []rune(vs)
+						if string(runedValue[0]) != "\"" || string(runedValue[len(runedValue)-1]) != "\"" {
+							return errors.New("First and last character of string must be \"")
+						}
+						v.Set(i, vs[1:len(vs)-1])
 					}
 					s.Set%v(v)`
 
