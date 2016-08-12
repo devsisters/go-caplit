@@ -275,7 +275,7 @@ func (s {{.Name}}) ReadCapLit(r io.Reader) error {
 	var inQuote bool
 	parser := capLitParser()
 	for {
-		b, err := b.ReadByte()
+		b, _, err := b.ReadRune()
 		if err != nil {
 			break
 		}
