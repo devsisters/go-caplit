@@ -113,11 +113,9 @@ import (
 	"io"
 	"strconv"
 	"fmt"
-	{{if .unionExists}}
 	"strings"
-	{{end}}
-    {{range .importList}}
-    . "{{.}}"{{end}}
+	{{range .importList}}
+	. "{{.}}"{{end}}
 	"github.com/glycerine/go-capnproto"
 )
 
@@ -162,7 +160,7 @@ func arrayInStringParser(s string) []string {
 }
 
 
-func capLitParser() func(string) (string, string, string, bool) {
+func capLitParser() func(c rune, onFlush func(key string, value string)) (string, bool) {
 	const None = 0
 	const In = 1
 	const Key = 2
@@ -170,60 +168,59 @@ func capLitParser() func(string) (string, string, string, bool) {
 
 	status := None
 	substatus := ""
-	key := ""
-	value := ""
-    innerCount := 0
-    inQuote := false
+	key := bytes.NewBuffer(nil)
+	value := bytes.NewBuffer(nil)
+	innerCount := 0
+	inQuote := false
 
-	return func(c string) (string, string, string, bool) {
-        if substatus == "flush" {
-            substatus = ""
-            key = ""
-            value = ""
-        }
+	return func(c rune, onFlush func(key string, value string)) (string, bool) {
+		if key == nil {
+			key = bytes.NewBuffer(nil)
+			value = bytes.NewBuffer(nil)
+		}
 
 		if status == None {
 			switch c {
-			case "(":
+			case '(':
 				status = Key
-			case ")":
+			case ')':
 				status = None
 			default:
 				panic(fmt.Sprintf("parse error : None status, %s",c))
 			}
 		} else if status == In {
 			switch c {
-			case ",":
+			case ',':
 				status = Key
 			}
 		} else if status == Key {
 			switch c {
-			case "=":
+			case '=':
 				status = Value
-			case " ":
+			case ' ':
 			default:
-				key += c
+				key.WriteRune(c)
 			}
 		} else if status == Value {
 			// array( [] ), group(), struct(), plain text
 			if inQuote {
-				value += c
+				value.WriteRune(c)
 			} else if substatus == "plain" {
 				switch c {
-				case ",":
+				case ',':
 					status = Key
 					fallthrough
-				case ")":
+				case ')':
 					substatus = "flush"
 				default:
-					value += c
+					value.WriteRune(c)
 				}
 			} else if substatus == "(" {
-				value += c
+				value.WriteRune(c)
 				switch c {
-				case "(":
+				case '(':
 					innerCount++
-				case ")":
+				case ')':
 					innerCount--
 					if innerCount < 0 {
 						panic("parse error : ( and ) does not match")
@@ -233,11 +230,11 @@ func capLitParser() func(string) (string, string, string, bool) {
 					}
 				}
 			} else if substatus == "[" {
-				value += c
+				value.WriteRune(c)
 				switch c {
-				case "[":
+				case '[':
 					innerCount++
-				case "]":
+				case ']':
 					innerCount--
 					if innerCount < 0 {
 						panic("parse error : [ and ] does not match")
@@ -247,60 +244,68 @@ func capLitParser() func(string) (string, string, string, bool) {
 					}
 				}
 			} else {
-				value += c
+				value.WriteRune(c)
 				switch c {
-				case "[":
-					fallthrough
-				case "(":
+				case '[':
 					innerCount++
-					substatus = c
+					substatus = "["
+				case '(':
+					innerCount++
+					substatus = "("
 				default:
 					substatus = "plain"
 				}
 			}
 		}
 
-        if c == "\"" {
-            inQuote = !inQuote
-        }
+		if c == '"' {
+			inQuote = !inQuote
+		}
 
-		return substatus, key, value, inQuote
+		if substatus == "flush" {
+			onFlush(key.String(), value.String())
+
+			substatus = ""
+			key = nil
+			value = nil
+		}
+		return substatus, inQuote
 	}
 }
 
 {{range .structs}}
 func (s {{.Name}}) ReadCapLit(r io.Reader) error {
 	b := bufio.NewReader(r)
-	var substatus, key, value string
+	var substatus string
 	var inQuote bool
 	parser := capLitParser()
 	for {
-		b, _, err := b.ReadRune()
+		c, _, err := b.ReadRune()
 		if err != nil {
 			break
 		}
 
-		c := string(b)
-		if c == "\n" || c == "\t" {
+		if c == '\n' || c == '\t' {
 			continue
 		}
 
-		if c == " " && !inQuote {
+		if c == ' ' && !inQuote {
 			continue
 		}
 
-		substatus, key, value, inQuote = parser(c)
-
-		if substatus == "flush" {
+		var cbErr error = nil
+		substatus, inQuote = parser(c, func(key, value string) {
 			switch key {
 			{{range .Keys}}
 			case "{{.Name}}": {{.Template}}
 			{{end}}
 			default:
-				return errors.New(fmt.Sprintf("cannot find key in {{.Name}} : %v", key))
+				cbErr = errors.New(fmt.Sprintf("cannot find key in {{.Name}} : %v", key))
 			}
+		})
 
-			substatus = ""
+		if cbErr != nil {
+			return cbErr
 		}
 	}
 
@@ -326,14 +331,16 @@ func (s {{.Parent}}{{.Name}}) GetKeyAndValue(v string) error {
 		value := keyAndValue[1]
 		value = strings.TrimSpace(value[:len(value)-1])
 
+		var cbErr error = nil
 		switch key {
 		{{range .Keys}}
 		case "{{.Name}}": {{.Template}}
 		{{end}}
 		default:
-			return errors.New(fmt.Sprintf("cannot find schema for %v=%v", key, value))
+			cbErr = errors.New(fmt.Sprintf("cannot find schema for %v=%v", key, value))
 		}
-		return nil
+
+		return cbErr
 	}
 
 	return errors.New("Value for {{.Name}} does not wrapped with ()")
@@ -350,98 +357,98 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 	int8Template := `
 					v, err := strconv.ParseInt(value, 10, 8)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(int8(v))`
 
 	int16Template := `
 					v, err := strconv.ParseInt(value, 10, 16)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(int16(v))`
 
 	int32Template := `
 					v, err := strconv.ParseInt(value, 10, 32)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(int32(v))`
 
 	intTemplate := `
 					v, err := strconv.ParseInt(value, 10, 32)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(int(v))`
 
 	int64Template := `
 					v, err := strconv.ParseInt(value, 10, 64)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(v)`
 
 	uint8Template := `
 					v, err := strconv.ParseUint(value, 10, 8)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(uint8(v))`
 
 	uint16Template := `
 					v, err := strconv.ParseUint(value, 10, 16)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(uint16(v))`
 
 	uint32Template := `
 					v, err := strconv.ParseUint(value, 10, 32)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(uint32(v))`
 
 	uintTemplate := `
 					v, err := strconv.ParseUint(value, 10, 32)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(uint(v))`
 
 	uint64Template := `
 					v, err := strconv.ParseUint(value, 10, 64)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(v)`
 
 	float32Template := `
 					v, err := strconv.ParseFloat(value, 32)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(float32(v))`
 
 	float64Template := `
 					v, err := strconv.ParseFloat(value, 64)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(v)`
 
 	stringTemplate := `
 					runedValue := []rune(value)
 					if string(runedValue[0]) != "\"" || string(runedValue[len(runedValue)-1]) != "\"" {
-						return errors.New("First and last character of string must be \"")
+						cbErr = errors.New("First and last character of string must be \"")
 					}
 					s.Set%v(value[1:len(value)-1])`
 
 	boolTemplate := `
 					v, err := strconv.ParseBool(value)
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%v(v)`
 
@@ -452,7 +459,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						runedValue := []rune(vs)
 						if string(runedValue[0]) != "\"" || string(runedValue[len(runedValue)-1]) != "\"" {
-							return errors.New("First and last character of string must be \"")
+							cbErr = errors.New("First and last character of string must be \"")
 						}
 						v.Set(i, vs[1:len(vs)-1])
 					}
@@ -464,7 +471,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseInt(vs, 10, 8)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, int8(elem))
 					}
@@ -476,7 +483,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseInt(vs, 10, 16)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, int16(elem))
 					}
@@ -488,7 +495,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseInt(vs, 10, 32)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, int32(elem))
 					}
@@ -500,7 +507,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseInt(vs, 10, 32)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, int(elem))
 					}
@@ -512,7 +519,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseInt(vs, 10, 64)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, elem)
 					}
@@ -524,7 +531,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseUint(vs, 10, 8)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, uint8(elem))
 					}
@@ -536,7 +543,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseUint(vs, 10, 16)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, uint16(elem))
 					}
@@ -548,7 +555,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseUint(vs, 10, 32)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, uint32(elem))
 					}
@@ -560,7 +567,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseUint(vs, 10, 32)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, uint(elem))
 					}
@@ -572,7 +579,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseUint(vs, 10, 64)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, elem)
 					}
@@ -584,7 +591,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseFloat(vs, 32)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, elem)
 					}
@@ -596,7 +603,7 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					for i, vs := range valueList {
 						elem, err := strconv.ParseFloat(vs, 64)
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, elem)
 					}
@@ -626,9 +633,9 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 					v := New%s(s.Segment, len(valueList))
 					for i, vs := range valueList {
 						elem := New%s(s.Segment)
-						err := elem.ReadCapLit(bytes.NewReader([]byte(vs)))
+						err := elem.ReadCapLit(strings.NewReader(vs))
 						if err != nil {
-							return err
+							cbErr = err
 						}
 						v.Set(i, elem)
 					}
@@ -636,16 +643,16 @@ func capnpStructParamsFromFuncDecl(funcDecl CapnpFuncDecl, enumList []string, un
 
 	structTemplate := `
 					v := New%s(s.Segment)
-					err := v.ReadCapLit(bytes.NewReader([]byte(value)))
+					err := v.ReadCapLit(strings.NewReader(value))
 					if err != nil {
-						return err
+						cbErr = err
 					}
 					s.Set%s(v)`
 	unionTemplate := `
 					v := s.%s()
 					err := v.GetKeyAndValue(value)
 					if err != nil {
-						return err
+						cbErr = err
 					}`
 	typeName := funcDecl.FuncDecl.Name.Name[3:]
 	var capnpStructParams CapnpStructParams
