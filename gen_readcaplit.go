@@ -121,12 +121,13 @@ import (
 
 func arrayInStringParser(s string) []string {
 	s = s[1:len(s)-1]
-	l := len(s)
+	rune_s := []rune(s)
+	l := len(rune_s)
 	innerCount := 0
 	buff := ""
 	ret_val := make([]string, 0)
 	for i:=0; i<l; i++ {
-		target := string(s[i])
+		target := string(rune_s[i])
 
 		switch target {
 		case "[":
