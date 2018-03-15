@@ -187,7 +187,7 @@ func capLitParser() func(c rune, onFlush func(key string, value string)) (string
 			case ')':
 				status = None
 			default:
-				panic(fmt.Sprintf("parse error : None status, %s",c))
+				panic(fmt.Sprintf("parse error : None status, %v",c))
 			}
 		} else if status == In {
 			switch c {
