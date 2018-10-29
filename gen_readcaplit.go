@@ -13,10 +13,12 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 	newCapnpUnions := make([]CapnpStruct, 0)
 	structsToUnionMap := make(map[string][]CapnpFuncDecl)
 
+	sources := parseCapnpSources(inputPath+"/*.capnp.go")
+
 	unionFilter := func(t *ast.FuncDecl) bool {
 		return t.Name.Name == "Which" && receiverType(t) != returnType(t)
 	}
-	unionWhichDecls := parseCapnpFuncDecl(inputPath+"/*.capnp.go", unionFilter)
+	unionWhichDecls := sources.FilterFuncDecl(unionFilter)
 
 	structToUnionFilter := func(t *ast.FuncDecl) bool {
 		retType := returnType(t)
@@ -29,7 +31,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 		return false
 	}
 
-	structToUnionDecls := parseCapnpFuncDecl(inputPath+"/*.capnp.go", structToUnionFilter)
+	structToUnionDecls := sources.FilterFuncDecl(structToUnionFilter)
 
 	for _, decl := range structToUnionDecls {
 		unionName := decl.FuncDecl.Name.Name
@@ -39,7 +41,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 		filter := func(t *ast.FuncDecl) bool {
 			return receiverType(t) == unionFullName && strings.HasPrefix(t.Name.Name, "Set") && t.Name.Name != "Set"
 		}
-		unionSetters := parseCapnpFuncDecl(inputPath+"/*.capnp.go", filter)
+		unionSetters := sources.FilterFuncDecl(filter)
 
 		unionCapnpStruct := CapnpStruct{}
 		unionCapnpStruct.Path = decl.Path
@@ -49,7 +51,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 		unionNameFuncFilter := func(t *ast.FuncDecl) bool {
 			return receiverType(t) == unionCapnpStruct.Name && returnType(t) != unionCapnpStruct.Name && strings.HasPrefix(t.Name.Name, returnType(t))
 		}
-		structToUnionFuncDecls := parseCapnpFuncDecl(inputPath+"/*.capnp.go", unionNameFuncFilter)
+		structToUnionFuncDecls := sources.FilterFuncDecl(unionNameFuncFilter)
 		for _, funcDecl := range unionSetters {
 			capnpStructParams := capnpStructParamsFromFuncDecl(funcDecl, enumList, structToUnionFuncDecls)
 			unionCapnpStruct.Keys = append(unionCapnpStruct.Keys, capnpStructParams)
@@ -67,7 +69,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 		filter := func(t *ast.FuncDecl) bool {
 			return receiverType(t) == capnpStruct.Name && strings.HasPrefix(t.Name.Name, "Set") && t.Name.Name != "Set"
 		}
-		funcDecls := parseCapnpFuncDecl(inputPath+"/*.capnp.go", filter)
+		funcDecls := sources.FilterFuncDecl(filter)
 
 		validUnionDecls := make([]CapnpFuncDecl, 0)
 		for _, funcDecl := range structToUnionFuncDecls {
