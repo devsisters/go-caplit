@@ -121,10 +121,14 @@ func check(err error) {
 	}
 }
 
-type parsedSourceMap map[string]*ast.File
+type pathSourcePair struct {
+	path string
+	file *ast.File
+}
+type parsedSources []pathSourcePair
 
-func parseCapnpSources(filePattern string) parsedSourceMap {
-	parsedFiles := make(parsedSourceMap)
+func parseCapnpSources(filePattern string) parsedSources {
+	parsedFiles := make(parsedSources, 0)
 	fset := token.NewFileSet()
 	matches, err := filepath.Glob(filePattern)
 	check(err)
@@ -133,24 +137,22 @@ func parseCapnpSources(filePattern string) parsedSourceMap {
 			continue
 		}
 
-		_, ok := parsedFiles[path]
-		if !ok {
-			f, err := parser.ParseFile(fset, path, nil, 0)
-			check(err)
-			parsedFiles[path] = f
-		}
+		parsed, err := parser.ParseFile(fset, path, nil, 0)
+		check(err)
+
+		parsedFiles = append(parsedFiles, pathSourcePair{path: path, file: parsed})
 	}
 	return parsedFiles
 }
 
-func (files parsedSourceMap) FilterFuncDecl(filter func(*ast.FuncDecl) bool) []CapnpFuncDecl {
+func (files parsedSources) FilterFuncDecl(filter func(*ast.FuncDecl) bool) []CapnpFuncDecl {
 	funcDecls := make([]CapnpFuncDecl, 0)
-	for path, file := range files {
-		for _, d := range file.Decls {
+	for _, pair := range files {
+		for _, d := range pair.file.Decls {
 			switch t := d.(type) {
 			case *ast.FuncDecl:
 				if filter(t) {
-					funcDecls = append(funcDecls, CapnpFuncDecl{t, strings.TrimSuffix(path, ".go")})
+					funcDecls = append(funcDecls, CapnpFuncDecl{t, strings.TrimSuffix(pair.path, ".go")})
 				}
 			}
 		}
@@ -159,7 +161,7 @@ func (files parsedSourceMap) FilterFuncDecl(filter func(*ast.FuncDecl) bool) []C
 }
 
 func CapnpStructs(capnpDir string) []CapnpStruct {
-	funcDecls := parseCapnpSources(capnpDir+"/*.capnp.go").FilterFuncDecl(func(t *ast.FuncDecl) bool { return strings.HasPrefix(t.Name.Name, "NewRoot") })
+	funcDecls := parseCapnpSources(capnpDir + "/*.capnp.go").FilterFuncDecl(func(t *ast.FuncDecl) bool { return strings.HasPrefix(t.Name.Name, "NewRoot") })
 	capnpStructs := make([]CapnpStruct, 0)
 	for _, funcDecl := range funcDecls {
 		capnpStruct := CapnpStruct{
@@ -207,7 +209,7 @@ func generate(tmplStr, filepath string, params map[string]interface{}) {
 }
 
 func CapnpEnums(capnpDir string) []CapnpStruct {
-	funcDecls := parseCapnpSources(capnpDir+"/*.capnp.go").FilterFuncDecl(func(t *ast.FuncDecl) bool { return strings.HasSuffix(t.Name.Name, "FromString") })
+	funcDecls := parseCapnpSources(capnpDir + "/*.capnp.go").FilterFuncDecl(func(t *ast.FuncDecl) bool { return strings.HasSuffix(t.Name.Name, "FromString") })
 	capnpStructs := make([]CapnpStruct, 0)
 	for _, funcDecl := range funcDecls {
 		capnpStruct := CapnpStruct{

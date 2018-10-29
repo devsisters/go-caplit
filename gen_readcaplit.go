@@ -13,7 +13,7 @@ func GenCapnpReadCapLit(inputPath, outputPath string, packageName string, enumLi
 	newCapnpUnions := make([]CapnpStruct, 0)
 	structsToUnionMap := make(map[string][]CapnpFuncDecl)
 
-	sources := parseCapnpSources(inputPath+"/*.capnp.go")
+	sources := parseCapnpSources(inputPath + "/*.capnp.go")
 
 	unionFilter := func(t *ast.FuncDecl) bool {
 		return t.Name.Name == "Which" && receiverType(t) != returnType(t)
